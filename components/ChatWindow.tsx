@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AppSettings, ChatMessage, Part } from '../types';
+import { AppSettings, ChatMessage, Part, StudyMode } from '../types';
 import { useMultimodalChat } from '../hooks/useGeminiLive';
 import { MicIcon } from './icons/MicIcon';
 import { PaperclipIcon } from './icons/PaperclipIcon';
@@ -23,11 +23,12 @@ const SimpleMarkdown: React.FC<{ text: string }> = ({ text }) => {
 };
 
 // 1. Message Bubble
-const MessageBubble: React.FC<{ message: ChatMessage }> = ({ message }) => {
+const MessageBubble: React.FC<{ message: ChatMessage; isLast: boolean }> = ({ message, isLast }) => {
   const isUser = message.role === 'user';
+  const animationClass = isLast ? 'animate-slide-in-fade-in' : '';
 
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 ${animationClass}`}>
       <div
         className={`max-w-prose p-3 rounded-lg ${
           isUser
@@ -57,20 +58,29 @@ const MessageBubble: React.FC<{ message: ChatMessage }> = ({ message }) => {
 };
 
 // 2. Chat History
-const ChatHistory: React.FC<{ messages: ChatMessage[] }> = ({ messages }) => {
+const ChatHistory: React.FC<{ messages: ChatMessage[], isSending: boolean }> = ({ messages, isSending }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isSending]);
 
   return (
     <div ref={scrollRef} className="flex-grow p-4 pt-24 overflow-y-auto">
-      {messages.filter(msg => msg.role !== 'function').map((msg) => (
-        <MessageBubble key={msg.timestamp} message={msg} />
+      {messages.filter(msg => msg.role !== 'function').map((msg, index) => (
+        <MessageBubble key={msg.timestamp} message={msg} isLast={index === messages.length - 1}/>
       ))}
+       {isSending && (
+        <div className="flex justify-start mb-4 animate-slide-in-fade-in">
+          <div className="bg-gray-700 text-[var(--text-color)] p-3 rounded-lg flex items-center gap-2">
+            <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></span>
+            <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse [animation-delay:0.2s]"></span>
+            <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse [animation-delay:0.4s]"></span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -79,7 +89,8 @@ const ChatHistory: React.FC<{ messages: ChatMessage[] }> = ({ messages }) => {
 const ChatInput: React.FC<{
   onSend: (prompt: string, image: Part | null) => void;
   isSending: boolean;
-}> = ({ onSend, isSending }) => {
+  placeholder?: string;
+}> = ({ onSend, isSending, placeholder }) => {
   const [prompt, setPrompt] = useState('');
   const [image, setImage] = useState<Part | null>(null);
   const [isListening, setIsListening] = useState(false);
@@ -179,7 +190,7 @@ const ChatInput: React.FC<{
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-          placeholder="Type or talk..."
+          placeholder={placeholder || "Type or talk..."}
           className="flex-grow bg-transparent focus:outline-none resize-none mx-2 text-lg max-h-40"
         />
         <button 
@@ -198,26 +209,77 @@ const ChatInput: React.FC<{
   );
 };
 
+// 4. Study Mode Selector
+const StudyModeSelector: React.FC<{
+    currentMode: StudyMode;
+    onChange: (mode: StudyMode) => void;
+}> = ({ currentMode, onChange }) => {
+    const modes = [
+        { id: StudyMode.EXPLAIN, label: 'Explain Concept' },
+        { id: StudyMode.QUIZ, label: 'Quiz Me' },
+        { id: StudyMode.SUMMARIZE, label: 'Summarize Text' },
+    ];
+
+    return (
+        <div className="flex justify-center items-center gap-2 p-2 border-t border-b border-gray-700 bg-gray-800/50">
+            <span className="text-sm font-medium text-gray-400 mr-2">Study Mode:</span>
+            {modes.map(mode => (
+                <button
+                    key={mode.id}
+                    onClick={() => onChange(mode.id)}
+                    className={`px-3 py-1 text-sm rounded-full transition-colors ${
+                        currentMode === mode.id
+                            ? 'bg-[var(--primary-color)] text-white'
+                            : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    }`}
+                >
+                    {mode.label}
+                </button>
+            ))}
+        </div>
+    );
+};
+
 
 // --- Main Component ---
 
 interface ChatWindowProps {
   settings: AppSettings;
   tools: FunctionDeclaration[],
-  onFunctionCall: (name: string, args: any) => Promise<any>
+  onFunctionCall: (name: string, args: any) => Promise<any>;
+  onSettingsChange: (newSettings: AppSettings) => void;
 }
 
-export const ChatWindow: React.FC<ChatWindowProps> = ({ settings, tools, onFunctionCall }) => {
+export const ChatWindow: React.FC<ChatWindowProps> = ({ settings, tools, onFunctionCall, onSettingsChange }) => {
   const { chatHistory, isSending, error, sendMessage } = useMultimodalChat(settings, tools, onFunctionCall);
+  const isStudyBuddyActive = settings.selectedPersonaId === 'study-buddy';
+
+  const getPlaceholder = () => {
+    if (!isStudyBuddyActive) {
+        return 'Type or talk...';
+    }
+    switch(settings.selectedStudyMode) {
+        case StudyMode.EXPLAIN: return 'Upload an image or paste a problem to explain...';
+        case StudyMode.QUIZ: return 'What topic should I quiz you on?';
+        case StudyMode.SUMMARIZE: return 'Paste text or upload an image to summarize...';
+        default: return 'Select a study mode or ask a general question...';
+    }
+  };
 
   return (
     <div
       className="w-full h-full flex flex-col"
       style={{ backgroundColor: 'var(--background-color)', color: 'var(--text-color)' }}
     >
-      <ChatHistory messages={chatHistory} />
+      <ChatHistory messages={chatHistory} isSending={isSending}/>
+      {isStudyBuddyActive && (
+          <StudyModeSelector 
+            currentMode={settings.selectedStudyMode}
+            onChange={(mode) => onSettingsChange({ ...settings, selectedStudyMode: mode })}
+          />
+      )}
       {error && <p className="text-red-400 text-center pb-2">{error}</p>}
-      <ChatInput onSend={sendMessage} isSending={isSending} />
+      <ChatInput onSend={sendMessage} isSending={isSending} placeholder={getPlaceholder()} />
     </div>
   );
 };

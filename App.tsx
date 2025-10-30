@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ChatWindow } from './components/ChatWindow';
 import { SettingsPanel } from './components/SettingsPanel';
-import { AppSettings, AppMode, Persona } from './types';
+import { AppSettings, AppMode, Persona, StudyMode } from './types';
 import { DEFAULT_SETTINGS, PERSONAS, changeThemeFunctionDeclaration } from './constants';
 import { SettingsIcon } from './components/icons/SettingsIcon';
 import { ToggleSwitch } from './components/ToggleSwitch';
@@ -81,16 +81,29 @@ function App() {
     const selectedPersona = PERSONAS.find(p => p.id === settings.selectedPersonaId);
     if (selectedPersona) {
         let prompt = selectedPersona.systemPrompt;
+        
         if (selectedPersona.id === 'language-tutor') {
             prompt += ` The user's target language is ${settings.languageTutorLang}.`;
-            // Add specific instructions for voice mode for immediate feedback
             if (settings.appMode === AppMode.VOICE) {
                 prompt += ` After the user finishes speaking, you MUST provide immediate, concise feedback on their pronunciation and grammar, prefixed with "Feedback:", before continuing the conversation.`;
             }
+        } else if (selectedPersona.id === 'study-buddy') {
+            switch(settings.selectedStudyMode) {
+                case StudyMode.EXPLAIN:
+                    prompt += `\n\n[Study Mode: Explain a Concept] The user will provide an image or text of a problem. Your task is to provide a step-by-step explanation to help them understand the solution. Do not just give the final answer. Guide them through the process.`;
+                    break;
+                case StudyMode.QUIZ:
+                    prompt += `\n\n[Study Mode: Quiz Me] You are in Quiz Mode. The user will provide a topic. Ask them one question at a time about that topic. Wait for their answer, then provide immediate feedback on whether they are correct and a brief explanation. Then, proceed to the next question. Keep the quiz engaging.`;
+                    break;
+                case StudyMode.SUMMARIZE:
+                    prompt += `\n\n[Study Mode: Summarize Text] You are in Summarization Mode. The user will provide text or an image containing text. Your task is to provide a concise summary, highlighting the key points and main takeaways. Use bullet points where appropriate.`;
+                    break;
+            }
         }
+        
         setSettings(s => ({ ...s, systemPrompt: prompt }));
     }
-  }, [settings.selectedPersonaId, settings.languageTutorLang, settings.appMode]);
+  }, [settings.selectedPersonaId, settings.languageTutorLang, settings.appMode, settings.selectedStudyMode]);
 
   const handleFunctionCall = useCallback(async (name: string, args: any) => {
     console.log("Function Call:", name, args);
@@ -107,6 +120,10 @@ function App() {
   }, []);
   
   const handleSettingsChange = (newSettings: AppSettings) => {
+    // Reset study mode if persona is no longer study buddy
+    if (newSettings.selectedPersonaId !== 'study-buddy' && newSettings.selectedStudyMode !== StudyMode.NONE) {
+        newSettings.selectedStudyMode = StudyMode.NONE;
+    }
     setSettings(newSettings);
   };
 
@@ -118,6 +135,32 @@ function App() {
           --secondary-color: ${settings.secondaryColor};
           --background-color: ${settings.backgroundColor};
           --text-color: ${settings.textColor};
+        }
+        @keyframes slide-in-fade-in {
+            0% {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-slide-in-fade-in {
+            animation: slide-in-fade-in 0.3s ease-out forwards;
+        }
+
+        @keyframes ripple {
+          0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.7); }
+          70% { box-shadow: 0 0 0 20px rgba(236, 72, 153, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
+        }
+        .animate-ripple {
+          animation: ripple 1.5s infinite;
+        }
+
+        .animate-pulse-fast {
+            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
       `}</style>
       
@@ -134,6 +177,7 @@ function App() {
                 settings={settings}
                 tools={[changeThemeFunctionDeclaration]}
                 onFunctionCall={handleFunctionCall}
+                onSettingsChange={handleSettingsChange}
             />
         ) : (
             <VoiceConversationWindow settings={settings} />

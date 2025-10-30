@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -7,6 +6,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gemini Conversational Voice Assistant</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @keyframes slide-in-fade-in {
+          0% {
+              opacity: 0;
+              transform: translateY(10px);
+          }
+          100% {
+              opacity: 1;
+              transform: translateY(0);
+          }
+      }
+      @keyframes ripple {
+        0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.7); }
+        70% { box-shadow: 0 0 0 20px rgba(236, 72, 153, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
+      }
+       @keyframes pulse-fast {
+            50% {
+                opacity: .5;
+            }
+        }
+    </style>
   <script type="importmap">
 {
   "imports": {

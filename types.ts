@@ -31,6 +31,13 @@ export enum AppMode {
     VOICE = 'VOICE',
 }
 
+export enum StudyMode {
+    NONE = 'NONE',
+    EXPLAIN = 'EXPLAIN',
+    QUIZ = 'QUIZ',
+    SUMMARIZE = 'SUMMARIZE',
+}
+
 export interface AppSettings {
   // AI Settings
   systemPrompt: string;
@@ -48,6 +55,7 @@ export interface AppSettings {
   selectedPersonaId: string;
   languageTutorLang: string;
   appMode: AppMode;
+  selectedStudyMode: StudyMode;
 }
 
 export enum ConnectionState {

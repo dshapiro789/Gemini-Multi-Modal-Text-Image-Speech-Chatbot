@@ -1,6 +1,6 @@
 // FIX: Import React to support JSX syntax for icon components.
 import React from 'react';
-import { AppSettings, AppMode, Persona } from './types';
+import { AppSettings, AppMode, Persona, StudyMode } from './types';
 import { FunctionDeclaration, Type } from '@google/genai';
 
 // --- ICONS (Minimal inline SVGs for personas) ---
@@ -58,6 +58,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   selectedPersonaId: 'general',
   languageTutorLang: 'Spanish',
   appMode: AppMode.TEXT,
+  selectedStudyMode: StudyMode.NONE,
 };
 
 export const AVAILABLE_VOICES: AppSettings['voice'][] = ['Zephyr', 'Puck', 'Charon', 'Kore', 'Fenrir'];
