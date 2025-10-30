@@ -1,0 +1,7 @@
+{
+  "name": "Gemini Conversational Voice Assistant",
+  "description": "A customizable conversational voice assistant plugin powered by the Gemini 2.5 Native Audio (Live) API. Engage in real-time voice conversations with an AI that can be tailored to any brand or purpose.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
